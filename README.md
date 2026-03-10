@@ -98,7 +98,7 @@ Se non parte nessuna email, non viene registrata alcuna riga nello storico.
 POST   /api/employees/createEmployee/ - Crea un dipendente
 GET    /api/employees/getEmployees/?is_active=true - Get di tutti i dipendenti attivi
 GET    /api/employees/getEmployee/<id>/ - Get di un dipendente dato l'id
-PUT/PATCH  /api/employees/updateEmployee/<id>/ - Modifica un dipendente
+PUT  /api/employees/updateEmployee/<id>/ - Modifica un dipendente
 DELETE     /api/employees/deleteEmployee/<id>/ - Eliminazione di un dipendente
 GET        /api/employees/getTodayBirthdays/ - Dipendenti che compiono gli anni oggi
 
