@@ -115,26 +115,22 @@ def send_today_birthdays_task(
     if not birthday_employees:
         return 0
 
-    subject, body = _build_daily_email(birthday_employees)
-
-    recipients_qs = Employee.objects.filter(is_active=True).exclude(email="")
-
-    # Invio solo a persone dello stesso team e stessa sede
-    # dei festeggiati di oggi.
-    locations = {e.location for e in birthday_employees if e.location}
-    teams = {e.team for e in birthday_employees if e.team}
-    if locations:
-        recipients_qs = recipients_qs.filter(location__in=locations)
-    if teams:
-        recipients_qs = recipients_qs.filter(team__in=teams)
-
     birthday_ids = [emp.pk for emp in birthday_employees]
 
     # Gruppo 1: colleghi che NON festeggiano oggi
-    non_birthday_qs = recipients_qs
-    if exclude_birthday_people and birthday_employees:
-        non_birthday_qs = non_birthday_qs.exclude(pk__in=birthday_ids)
-    non_birthday_emails = sorted({emp.email for emp in non_birthday_qs})
+    # Ora la mail "generale" è suddivisa per COPPIA (team, location):
+    # per ogni combinazione esistente tra i festeggiati, viene inviata
+    # un'email separata ai colleghi attivi di quel team/sede.
+    non_birthday_emails: list[str] = []
+    segment_payloads: list[dict] = []
+
+    # Costruisco le combinazioni (location, team) presenti tra i festeggiati
+    segments: dict[tuple[str, str], list[Employee]] = {}
+    for emp in birthday_employees:
+        key = (emp.location, emp.team)
+        segments.setdefault(key, []).append(emp)
+
+    subject, body = _build_daily_email(birthday_employees)
 
     # Gruppo 2: persone che festeggiano oggi (solo quelle con email valorizzata)
     birthday_recipients = [
@@ -146,9 +142,7 @@ def send_today_birthdays_task(
 
     # Costruisco un JSON riepilogativo di cosa verrà inviato
     payload = {
-        "subject": subject,
-        "body": body,
-        "recipients_non_birthday": non_birthday_emails,
+        "segments_non_birthday": segment_payloads,
         "recipients_birthday": [e.email for e in birthday_recipients],
         "birthday_people": [
             {
@@ -179,40 +173,68 @@ def send_today_birthdays_task(
     if config.sender_email:
         from_email = config.sender_email
 
-    # Invio a chi NON festeggia: un'unica email con la lista festeggiati
+    # Invio a chi NON festeggia: email di team per ciascuna (team, location)
+    for (loc, team), segment_employees in segments.items():
+        # Subject/body specifici per questo team+sede
+        seg_subject, seg_body = _build_daily_email(segment_employees)
 
-    if non_birthday_emails:
-        try:
-            send_mail(
-                subject=subject,
-                message=non_birthday_body,
-                from_email=from_email,
-                recipient_list=non_birthday_emails,
-                fail_silently=False,
+        seg_recipients_qs = (
+            Employee.objects.filter(is_active=True)
+            .exclude(email="")
+            .filter(location=loc, team=team)
+        )
+        if exclude_birthday_people and segment_employees:
+            seg_recipients_qs = seg_recipients_qs.exclude(
+                pk__in=[e.pk for e in segment_employees]
             )
-        except Exception as exc:
-            success = False
-            error_message = str(exc)
+
+        seg_emails = sorted({emp.email for emp in seg_recipients_qs})
+        non_birthday_emails.extend(seg_emails)
+
+        if seg_emails:
+            try:
+                send_mail(
+                    subject=seg_subject,
+                    message=seg_body,
+                    from_email=from_email,
+                    recipient_list=seg_emails,
+                    fail_silently=False,
+                )
+            except Exception as exc:
+                success = False
+                error_message = str(exc)
+
+        # Info di debug per questo segmento
+        segment_payloads.append(
+            {
+                "location": loc,
+                "team": team,
+                "subject": seg_subject,
+                "body": seg_body,
+                "recipients_non_birthday": seg_emails,
+            }
+        )
 
     # Invio a chi festeggia: email personalizzata con auguri + (eventuale) lista
     for emp in birthday_recipients:
-        # Lista di eventuali altri festeggiati (escludendo il diretto interessato)
-        other_birthday_people = [e for e in birthday_employees if e.pk != emp.pk]
+        # Lista di eventuali altri festeggiati nello STESSO team e STESSA sede
+        # (escludendo il diretto interessato). In questo modo, se ci sono più team,
+        # ogni persona vede solo i colleghi del proprio team/location.
+        other_birthday_people = [
+            e
+            for e in birthday_employees
+            if e.pk != emp.pk and e.team == emp.team and e.location == emp.location
+        ]
 
         # Usa SEMPRE la config dedicata ai festeggiati (pk=2)
         today = date.today()
         date_str = today.strftime("%d/%m/%Y")
+        has_other_people = bool(other_birthday_people)
         employees_str = (
-            _employees_text_list(other_birthday_people) if other_birthday_people else "Nessuno."
+            _employees_text_list(other_birthday_people) if has_other_people else ""
         )
-        teams = sorted(
-            {e.team for e in birthday_employees if getattr(e, "team", None)}
-        )
-        locations = sorted(
-            {e.location for e in birthday_employees if getattr(e, "location", None)}
-        )
-        team_str = ", ".join(teams) if teams else ""
-        location_str = ", ".join(locations) if locations else ""
+        team_str = emp.team or ""
+        location_str = emp.location or ""
 
         personal_subject = birthday_cfg.subject_template.format(
             date=date_str,
@@ -221,13 +243,22 @@ def send_today_birthdays_task(
             location=location_str,
             first_name=emp.first_name,
         )
-        personal_body = birthday_cfg.body_template.format(
-            date=date_str,
-            employees=employees_str,
-            team=team_str,
-            location=location_str,
-            first_name=emp.first_name,
-        )
+        if has_other_people:
+            # Usa il template completo (con la parte "festeggiano anche")
+            personal_body = birthday_cfg.body_template.format(
+                date=date_str,
+                employees=employees_str,
+                team=team_str,
+                location=location_str,
+                first_name=emp.first_name,
+            )
+        else:
+            # Nessun altro festeggiato nel suo team+sede: invia un messaggio più semplice
+            personal_body = (
+                f"Ciao {emp.first_name},\n\n"
+                "tanti auguri di buon compleanno!\n\n"
+                "Goditi la giornata!"
+            )
         try:
             send_mail(
                 subject=personal_subject,
