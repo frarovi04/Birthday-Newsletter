@@ -56,9 +56,7 @@ urlpatterns = [
         name="employees-today-birthdays",
     ),
 
-    # ======================================
     #  NOTIFICHE COMPLEANNI (INVIO/STORICO)
-    # ======================================
 
     # Trigger invio email compleanni di oggi (POST)
     path(
