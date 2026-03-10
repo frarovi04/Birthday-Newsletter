@@ -163,7 +163,7 @@ def send_today_birthdays_task(
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
     # Config 1: non festeggiati (usata in _build_daily_email)
     config = EmailConfig.objects.filter(pk=1).first()
-    # Config 2: festeggiati (DEVE esistere, niente fallback)
+    # Config 2: festeggiati
     birthday_cfg = EmailConfig.objects.filter(pk=2).first()
     if not config or not birthday_cfg:
         raise RuntimeError(

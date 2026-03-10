@@ -80,21 +80,28 @@ class BirthdayNotificationListView(generics.ListAPIView):
     serializer_class = BirthdayNotificationSerializer
 
 
-class EmailConfigListCreateView(generics.ListCreateAPIView):
+class EmailConfigListCreateView(generics.ListAPIView):
     """
     GET: lista di tutte le email config (non festeggiati, festeggiati, ecc.)
-    POST: crea una nuova configurazione.
+    (nessuna POST: i template non si creano via API pubblica)
     """
 
     queryset = EmailConfig.objects.all()
     serializer_class = EmailConfigSerializer
 
 
-class EmailConfigDetailView(generics.RetrieveUpdateDestroyAPIView):
+class EmailConfigGetView(generics.RetrieveAPIView):
     """
-    GET: dettaglio config (per id)
-    PUT/PATCH: aggiorna config
-    DELETE: cancella config (se non referenziata altrove)
+    GET: restituisce un singolo template email per id.
+    """
+
+    queryset = EmailConfig.objects.all()
+    serializer_class = EmailConfigSerializer
+
+
+class EmailConfigUpdateView(generics.UpdateAPIView):
+    """
+    PUT/PATCH: aggiorna un template email per id (solo modifica, niente POST/DELETE).
     """
 
     queryset = EmailConfig.objects.all()

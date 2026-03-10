@@ -2,8 +2,9 @@ from django.urls import path
 
 from .views import (
     BirthdayNotificationListView,
-    EmailConfigDetailView,
+    EmailConfigGetView,
     EmailConfigListCreateView,
+    EmailConfigUpdateView,
     EmployeeDetailView,
     EmployeeListCreateView,
     TodayBirthdayEmployeeListView,
@@ -71,20 +72,24 @@ urlpatterns = [
         name="notifications-get",
     ),
 
-    # =======================
     #  CONFIGURAZIONE EMAIL
-    # =======================
 
-    # Lista/creazione config email
+    # Lista config email (GET)
     path(
         "config/email/",
         EmailConfigListCreateView.as_view(),
-        name="email-config-list-create",
+        name="email-config-list",
     ),
-    # Dettaglio/modifica/svuota singola config email
+    # GET singolo template (solo lettura)
     path(
-        "config/email/<int:pk>/",
-        EmailConfigDetailView.as_view(),
-        name="email-config-detail",
+        "config/email/getTemplate/<int:pk>/",
+        EmailConfigGetView.as_view(),
+        name="email-config-get",
+    ),
+    # UPDATE singolo template (solo PUT/PATCH)
+    path(
+        "config/email/updateTemplate/<int:pk>/",
+        EmailConfigUpdateView.as_view(),
+        name="email-config-update",
     ),
 ]
