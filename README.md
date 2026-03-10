@@ -109,7 +109,7 @@ GET    /api/notifications/getNotifications/ - Restituisce in formato json il log
 # Template email (solo lettura e modifica, niente delete)
 GET            /api/config/email/ - Get di tutti i template mail disponibili
 GET            /api/config/email/getTemplate/<id>/ - Get di un template dato id
-PUT/PATCH      /api/config/email/updateTemplate/<id>/ - Modifica un template dato id
+PUT      /api/config/email/updateTemplate/<id>/ - Modifica un template dato id
 ```
 
 Parametro opzionale per l'invio: `?exclude_birthday=false` per mandare la mail di team anche ai festeggiati (default: `true`).
@@ -185,4 +185,6 @@ Ho utilizzato questo Json in body su postman, chiamando piu volte `POST /api/emp
 
 Implementazioni future:
 
-- Aggiunta e/o eliminazione di piu template
+- Aggiunta e/o eliminazione di piu template (template completamente differenti es. auguri al rientro dalle ferie)
+- Far partire ogni mattina la task di invio mail in automatico con uno scheduler
+- Traduzioni in base alla location della sede + fuso orario
