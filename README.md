@@ -65,13 +65,6 @@ Per ogni combinazione sede–team succede questo:
 - se un festeggiato è segnato come non attivo (per esempio perché in ferie), non riceve la mail personale ma può comunque apparire nella lista inviata ai colleghi, così sanno che dovranno fargli gli auguri al rientro;
 - se in una certa sede e in un certo team non c’è nessun festeggiato, per quel gruppo non viene inviata alcuna email.
 
-### Parametro di invio `exclude_birthday`
-
-L’endpoint di invio supporta il parametro facoltativo `exclude_birthday`.
-
-- Se `exclude_birthday=true` (valore di default), i festeggiati ricevono solo la mail personale e non ricevono anche la mail di team.
-- Se `exclude_birthday=false`, i festeggiati vengono inclusi anche nella mail di team e quindi ricevono entrambe le email.
-
 ### Template email (EmailConfig)
 
 Nel database esistono due template di base:
@@ -111,8 +104,6 @@ GET            /api/config/email/ - Get di tutti i template mail disponibili
 GET            /api/config/email/getTemplate/<id>/ - Get di un template dato id
 PUT      /api/config/email/updateTemplate/<id>/ - Modifica un template dato id
 ```
-
-Parametro opzionale per l'invio: `?exclude_birthday=false` per mandare la mail di team anche ai festeggiati (default: `true`).
 
 ---
 

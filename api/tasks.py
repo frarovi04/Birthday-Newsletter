@@ -85,9 +85,7 @@ def _build_daily_email(employees):
 
 
 @task()
-def send_today_birthdays_task(
-    exclude_birthday_people: bool = True,
-) -> int:
+def send_today_birthdays_task() -> int:
     """
     Task che:
     - trova i dipendenti che compiono gli anni oggi
@@ -183,7 +181,7 @@ def send_today_birthdays_task(
             .exclude(email="")
             .filter(location=loc, team=team)
         )
-        if exclude_birthday_people and segment_employees:
+        if segment_employees:
             seg_recipients_qs = seg_recipients_qs.exclude(
                 pk__in=[e.pk for e in segment_employees]
             )

@@ -118,15 +118,7 @@ def send_today_birthdays(request):
       - salva un record nello storico degli invii
     """
 
-    exclude_birthday = request.query_params.get("exclude_birthday", "true").lower() in {
-        "true",
-        "1",
-        "yes",
-    }
-
-    result = send_today_birthdays_task.enqueue(
-        exclude_birthday_people=exclude_birthday,
-    )
+    result = send_today_birthdays_task.enqueue()
     return Response(
         {
             "detail": "Task di invio compleanni enqueued.",
